@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,28 +9,28 @@ import (
 var readTests = []struct {
 	Name   string
 	Input  string
-	Output []TestRow
+	Output []TestRecord
 }{
 	{
 		Name:   "Simple",
-		Input:  "112",
-		Output: []TestRow{{"11", "2"}},
+		Input:  "111111112",
+		Output: []TestRecord{{"11111111", "2"}},
 	},
 	{
 		Name:   "Invalid",
-		Input:  "11",
-		Output: []TestRow{{"11", "2"}},
+		Input:  "11111111",
+		Output: []TestRecord{{"11111111", "2"}},
 	},
 }
 
-type TestRow struct {
-	One string `flat:"1..2"`
-	Two string `flat:"3..3"`
+type TestRecord struct {
+	One string `flat:"1,8"`
+	Two string `flat:"9,9"`
 }
 
 func TestColumnsParsedSize(t *testing.T) {
 	r := Reader{
-		Object: TestRow{},
+		Object: TestRecord{},
 	}
 	fields, err := r.parseFieldTags()
 	assert.Equal(t, err, nil)
@@ -40,7 +39,7 @@ func TestColumnsParsedSize(t *testing.T) {
 
 func TestColumnName(t *testing.T) {
 	r := Reader{
-		Object: TestRow{},
+		Object: TestRecord{},
 	}
 	fields, err := r.parseFieldTags()
 	field := fields[0]
@@ -50,35 +49,22 @@ func TestColumnName(t *testing.T) {
 
 func TestSingleColumnLengthValueColumn(t *testing.T) {
 	r := Reader{
-		Object: TestRow{},
+		Object: TestRecord{},
 	}
 	fields, err := r.parseFieldTags()
 	field := fields[1]
 	assert.Equal(t, err, nil)
-	assert.Equal(t, field.From, 3)
-	assert.Equal(t, field.To, 3)
+	assert.Equal(t, field.From, 9)
+	assert.Equal(t, field.To, 9)
 }
 
 func TestMultiColumnLengthValueColumn(t *testing.T) {
 	r := Reader{
-		Object: TestRow{},
+		Object: TestRecord{},
 	}
 	fields, err := r.parseFieldTags()
 	field := fields[0]
 	assert.Equal(t, err, nil)
 	assert.Equal(t, field.From, 1)
-	assert.Equal(t, field.To, 2)
-}
-
-func TestRead(t *testing.T) {
-	for _, tt := range readTests {
-		r := NewReader(strings.NewReader(tt.Input), TestRow{})
-		out, err := r.ReadAll()
-
-		if err != nil {
-			assert.Fail(t, tt.Name, err)
-		}
-
-		assert.Equal(t, out, tt.Output)
-	}
+	assert.Equal(t, field.To, 8)
 }
