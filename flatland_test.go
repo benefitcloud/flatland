@@ -1,70 +1,55 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+var template = [][]int{
+	{1, 8},
+	{9, 9},
+}
+
 var readTests = []struct {
 	Name   string
 	Input  string
-	Output []TestRecord
+	Output [][]string
 }{
 	{
-		Name:   "Simple",
-		Input:  "111111112",
-		Output: []TestRecord{{"11111111", "2"}},
+		Name:  "Simple",
+		Input: "111111112",
+		Output: [][]string{
+			{"11111111", "2"},
+		},
 	},
 	{
-		Name:   "Invalid",
-		Input:  "11111111",
-		Output: []TestRecord{{"11111111", "2"}},
+		Name:  "Invalid",
+		Input: "11111111",
+		Output: [][]string{
+			{"11111111", "2"},
+		},
 	},
 }
 
-type TestRecord struct {
-	One string `flat:"1,8"`
-	Two string `flat:"9,9"`
+func TestScanLine(t *testing.T) {
+	tt := readTests[0]
+	r := NewReader(strings.NewReader(tt.Input), template)
+	obj, _ := r.ScanLine()
+
+	assert.Equal(t, obj, tt.Output[0])
 }
 
-func TestColumnsParsedSize(t *testing.T) {
-	r := Reader{
-		Object: TestRecord{},
-	}
-	fields, err := r.parseFieldTags()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, len(fields), 2)
-}
+func TestScanAll(t *testing.T) {
+	for _, tt := range readTests {
+		r := NewReader(strings.NewReader(tt.Input), template)
+		objs, err := r.ScanAll()
 
-func TestColumnName(t *testing.T) {
-	r := Reader{
-		Object: TestRecord{},
+		if err != nil {
+			assert.Equal(t, err, ErrInvalidRecordLength)
+		} else {
+			assert.Equal(t, objs, tt.Output)
+		}
 	}
-	fields, err := r.parseFieldTags()
-	field := fields[0]
-	assert.Equal(t, err, nil)
-	assert.Equal(t, field.Name, "One")
-}
-
-func TestSingleColumnLengthValueColumn(t *testing.T) {
-	r := Reader{
-		Object: TestRecord{},
-	}
-	fields, err := r.parseFieldTags()
-	field := fields[1]
-	assert.Equal(t, err, nil)
-	assert.Equal(t, field.From, 9)
-	assert.Equal(t, field.To, 9)
-}
-
-func TestMultiColumnLengthValueColumn(t *testing.T) {
-	r := Reader{
-		Object: TestRecord{},
-	}
-	fields, err := r.parseFieldTags()
-	field := fields[0]
-	assert.Equal(t, err, nil)
-	assert.Equal(t, field.From, 1)
-	assert.Equal(t, field.To, 8)
 }

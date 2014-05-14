@@ -4,61 +4,72 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"reflect"
-	"strconv"
-	"strings"
 )
 
 var (
-	ErrEmptyFieldTagCount = errors.New("this struct has no 'flat' field tags")
+	ErrInvalidRecordLength = errors.New("record is invalid length for template")
 )
-
-type field struct {
-	Name string
-	From int
-	To   int
-}
 
 // A Reader reads records from a fixed width encoded file using a given struct
 // as a template
 type Reader struct {
 	*bufio.Scanner
-	Object interface{}
-	Fields []field
+	Template [][]int
+	empty    bool
+	eor      bool
 }
 
 // NewReader returns a new Reader that reads from r
-func NewReader(r io.Reader, obj interface{}) *Reader {
-	return &Reader{bufio.NewScanner(r), obj, []field{}}
+func NewReader(r io.Reader, template [][]int) *Reader {
+	return &Reader{bufio.NewScanner(r), template, false, false}
 }
 
-func (r *Reader) parseFieldTags() (fs []field, err error) {
-	typ := reflect.TypeOf(r.Object)
-	for i := 0; i < typ.NumField(); i++ {
-		if f := r.parseFieldTag(typ.Field(i)); f.Name != "" {
-			fs = append(fs, f)
+func (r *Reader) ScanAll() ([][]string, error) {
+	var objs [][]string
+
+	for r.Scan() {
+		obj, err := r.parseRecord()
+
+		if err != nil {
+			return nil, err
 		}
+
+		objs = append(objs, obj)
 	}
 
-	if len(fs) < 1 {
-		err = ErrEmptyFieldTagCount
-	}
-
-	return
+	return objs, nil
 }
 
-func (r *Reader) parseFieldTag(sf reflect.StructField) (f field) {
-	if fieldVal := sf.Tag.Get("flat"); fieldVal != "" {
-		coords := strings.Split(fieldVal, ",")
-		f.Name = sf.Name
-		f.From, _ = strconv.Atoi(coords[0])
+func (r *Reader) ScanLine() ([]string, error) {
+	r.Scan()
+	obj, err := r.parseRecord()
 
-		if len(coords) < 2 {
-			f.To, _ = strconv.Atoi(coords[0])
-		} else {
-			f.To, _ = strconv.Atoi(coords[1])
-		}
+	if err != nil {
+		return nil, err
 	}
 
-	return
+	return obj, nil
+}
+
+func (r *Reader) EmptyLine() bool {
+	return r.empty && r.eor
+}
+
+func (r *Reader) EndOfRecord() bool {
+	return r.eor
+}
+
+func (r *Reader) parseRecord() ([]string, error) {
+	line := r.Text()
+	record := []string{}
+
+	for _, coords := range r.Template {
+		if len(line) < coords[0] || len(line) < coords[1] {
+			return nil, ErrInvalidRecordLength
+		}
+		value := line[coords[0]-1 : coords[1]]
+		record = append(record, value)
+	}
+
+	return record, nil
 }
