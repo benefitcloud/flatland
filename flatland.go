@@ -28,7 +28,7 @@ func (r *Reader) ScanAll() ([][]string, error) {
 	var objs [][]string
 
 	for r.Scan() {
-		obj, err := r.parseRecord()
+		obj, err := r.ParseRecord()
 
 		if err != nil {
 			return nil, err
@@ -42,7 +42,7 @@ func (r *Reader) ScanAll() ([][]string, error) {
 
 func (r *Reader) ScanLine() ([]string, error) {
 	r.Scan()
-	obj, err := r.parseRecord()
+	obj, err := r.ParseRecord()
 
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (r *Reader) EndOfRecord() bool {
 	return r.eor
 }
 
-func (r *Reader) parseRecord() ([]string, error) {
+func (r *Reader) ParseRecord() ([]string, error) {
 	line := r.Text()
 	record := []string{}
 
